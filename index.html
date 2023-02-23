@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta charset="UTF-8">
+    <title>Garamante - Analizzatore Fisse</title>
+    <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+</head>
+<div class="modal fade" id="insertModal" tabindex="-1" aria-labelledby="insertModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="insertModalLabel">Aggiungi fissa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="row">
+                        <label for="track" class="form-label">Canzone</label>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="track" placeholder="Canzone">
+                            <button class="btn btn-primary" type="button" id="searchTrack">Cerca</button>
+                        </div>
+                    </div>
+                    <div class="list-group list-group-flush" id="tracksResult"></div>
+                    <hr>
+                    <div class="mb-3">
+                        <label for="idf" class="form-label">Intensità</label>
+                        <input type="range" class="form-range" min="1" max="5" step="1" id="idf">
+                        <p class="opacity-50" id="idfValue">Selezionare l'intensità della fissa nella giornata odierna.</p>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                <button type="button" class="btn btn-primary" id="insertTrack">Aggiungi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<body>
+<div class="container">
+    <h1 class="my-3 mt-5">Ultime fisse</h1>
+    <table class="table table-hover table-hover">
+        <thead>
+        <tr>
+            <th scope="col">Ascoltatore</th>
+            <th scope="col">Canzone</th>
+            <th scope="col">Stato</th>
+            <th scope="col">GDF</th>
+        </tr>
+        </thead>
+        <tbody id="simhTracks">
+        </tbody>
+    </table>
+    <button type="button" class="btn btn-primary w-100 my-2 mt-4" data-bs-toggle="modal" data-bs-target="#insertModal">Aggiungi fissa</button>
+</div>
+</body>
+
+<script>
+    let tracksList = [];
+
+    $(document).ready(function () {
+        $.getJSON("http://localhost:3000/tracks", function (data) {
+            $.each(data, function (i, item) {
+                console.log(Date.parse(item.last_date));
+
+                $('#simhTracks').append(
+                    "<tr>" +
+                    "<th scope='row'>" + item.first_name + "</th>" +
+                    "<td><img height='40' src='" + item.track_artwork + "' alt='copertina' class='rounded-3 me-3'>" + item.track_name + " <span class='opacity-50'>di " + item.track_artist + "</span></td>" +
+                    (Date.now() - Date.parse(item.last_date) > 86400000 ? "<td><span class='badge bg-success bg-gradient'>In corso</span></td>" :
+                        "<td><span class='badge bg-danger bg-gradient'>Conclusa</span></td>") +
+                    (Date.now() - Date.parse(item.last_date) > 86400000 ? "<td>" + parseInt(item.gdf, 10) + " <i class='bi bi-arrow-down text-danger'></i></td>" :
+                    "<td>" + parseInt(item.gdf, 10)) +
+                    "</tr>");
+            });
+        });
+    });
+
+    $('#searchTrack').click(function () {
+        $.getJSON("https://itunes.apple.com/search?term=" + encodeURIComponent($("#track").val()) + "&country=it&entity=musicTrack", function (data) {
+            $("#tracksResult").empty();
+            if (data.results.length === 0) {
+                $("#tracksResult").append("<button href='#' class='list-group-item list-group-item-action'>Nessun risultato</button>");
+            } else {
+                $.each(data.results, function (i, item) {
+                    $("#tracksResult").append(
+                        "<button href='#' class='list-group-item list-group-item-action trackButton' style='white-space:nowrap;' id='" + i + "'>" +
+                        "<img src=" + item.artworkUrl60 + " class='img-fluid rounded-2 float-start my-1'>" +
+                        "<div class='float-start m-2 ms-3 float-start' style='white-space:nowrap;'>" +
+                        item.trackName +
+                        "<br>" +
+                        "<span class='opacity-50'>" + item.artistName + "</span>" +
+                        "</div>" +
+                        "</button>");
+
+                    tracksList.push(item);
+                });
+            }
+        }).fail(function() {
+            $("#tracksResult").append(
+                "<p class='text-danger'>È stato riscontrato un errore.</p>");
+        })
+    });
+
+    $(document).on('click', '.trackButton', function () {
+        const track = $('#track');
+        track.val('"' + tracksList[$(this).attr('id')].trackName + '" di ' + tracksList[$(this).attr('id')].artistName);
+        $("#tracksResult").empty();
+    });
+
+
+    $('#track').on('change', function () {
+        if ($(this).val().length === 0) {
+            $("#tracksResult").empty();
+        }
+    });
+
+    $('#idf').on('change', function () {
+        const idfValue = $('#idfValue');
+        idfValue.removeClass('opacity-50');
+        switch ($(this).val()) {
+            case '1':
+                idfValue.text('Minima');
+                idfValue.css('color', 'darkgreen');
+                break;
+            case '2':
+                idfValue.text('Bassa');
+                idfValue.css('color', 'green');
+                break;
+            case '3':
+                idfValue.text('Media');
+                idfValue.css('color', 'orange');
+                break;
+            case '4':
+                idfValue.text('Alta');
+                idfValue.css('color', 'red');
+                break;
+            case '5':
+                idfValue.text('Grave');
+                idfValue.css('color', 'darkred');
+                break;
+        }
+    });
+
+    $('#insertTrack').click(function () {
+
+    })
+
+    const insertModal = $('#insertModal');
+
+    insertModal.on('hidden.bs.modal', function () {
+        $('#track').val('');
+        $('#idf').val(3);
+        const idfValue = $('#idfValue');
+        idfValue.text('Selezionare l\'intensità della fissa nella giornata odierna.');
+        idfValue.addClass('opacity-50');
+        idfValue.css('color', 'black');
+        $('#tracksResult').empty();
+
+        tracksList = [];
+    });
+
+    insertModal.on('shown.bs.modal', function () {
+        $('#track').focus();
+
+        tracksList = [];
+    });
+</script>
+</html>
