@@ -23,8 +23,8 @@ app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
 
 app.use(allowCrossDomain);
 
-app.listen(3001, () => {
-    console.log("Morata started and Listening on port 3001");
+app.listen(3002, () => {
+    console.log("Morata started and Listening on port 3002");
 });
 
 app.get("/simh", async (req, res) => {
