@@ -3,15 +3,17 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta charset="UTF-8">
-    <title>Garamante - Analizzatore Fisse</title>
+    <title>Morata</title>
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="public/css/style.css">
     <script src="node_modules/jquery/dist/jquery.min.js"></script>
     <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="public/const.js"></script>
+    <script src="public/js/garamanteid.js"></script>
 </head>
 <div class="modal fade" id="insertModal" tabindex="-1" aria-labelledby="insertModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="insertModalLabel">Aggiungi fissa</h5>
@@ -45,7 +47,8 @@
 
 <body>
 <div class="container">
-    <h1 class="my-3 mt-5">Ultime fisse</h1>
+    <h1 class="my-3 mt-5">Morata</h1>
+    <h2 class="my-3 mt-5">Le tue fisse</h2>
     <table class="table table-hover table-hover">
         <thead>
         <tr>
@@ -64,24 +67,43 @@
 
 <script>
     let tracksList = [];
+    let selectedTrack = null;
+
+    const Status = [{
+        "id": 0,
+        "name": "In corso",
+        "color": "bg-danger bg-gradient"
+    }, {
+        "id": 1,
+        "name": "Conclusa",
+        "color": "bg-success bg-gradient"
+    }]
 
     $(document).ready(function () {
-        $.getJSON("http://localhost:3000/tracks", function (data) {
-            $.each(data, function (i, item) {
-                console.log(Date.parse(item.last_date));
+        initializeGaramanteIDAuthentication({
+            authenticated: function () {
+                loadSimhs();
+            },
+            unauthenticated: function () {
+                window.location.href = "login.html";
+            }
+        })
+    });
 
+    function loadSimhs() {
+        $.getJSON(endpoint + "/simh", function (data) {
+            $.each(data, function (i, item) {
                 $('#simhTracks').append(
-                    "<tr>" +
+                    "<tr class='clickable-row' data-href=" + endpoint + "/" + item.itunes_track_id + "'>" +
                     "<th scope='row'>" + item.first_name + "</th>" +
                     "<td><img height='40' src='" + item.track_artwork + "' alt='copertina' class='rounded-3 me-3'>" + item.track_name + " <span class='opacity-50'>di " + item.track_artist + "</span></td>" +
-                    (Date.now() - Date.parse(item.last_date) > 86400000 ? "<td><span class='badge bg-success bg-gradient'>In corso</span></td>" :
-                        "<td><span class='badge bg-danger bg-gradient'>Conclusa</span></td>") +
+                    "<td><span class='badge " + Status[item.status].color + "'>" + Status[item.status].name + "</span></td>" +
                     (Date.now() - Date.parse(item.last_date) > 86400000 ? "<td>" + parseInt(item.gdf, 10) + " <i class='bi bi-arrow-down text-danger'></i></td>" :
-                    "<td>" + parseInt(item.gdf, 10)) +
-                    "</tr>");
+                        "<td>" + parseInt(item.gdf, 10)) +
+                    "</tr></a>");
             });
         });
-    });
+    }
 
     $('#searchTrack').click(function () {
         $.getJSON("https://itunes.apple.com/search?term=" + encodeURIComponent($("#track").val()) + "&country=it&entity=musicTrack", function (data) {
@@ -91,7 +113,7 @@
             } else {
                 $.each(data.results, function (i, item) {
                     $("#tracksResult").append(
-                        "<button href='#' class='list-group-item list-group-item-action trackButton' style='white-space:nowrap;' id='" + i + "'>" +
+                        "<button class='list-group-item list-group-item-action trackButton' style='white-space:nowrap;' id='" + i + "'>" +
                         "<img src=" + item.artworkUrl60 + " class='img-fluid rounded-2 float-start my-1'>" +
                         "<div class='float-start m-2 ms-3 float-start' style='white-space:nowrap;'>" +
                         item.trackName +
@@ -103,18 +125,26 @@
                     tracksList.push(item);
                 });
             }
-        }).fail(function() {
+        }).fail(function () {
             $("#tracksResult").append(
                 "<p class='text-danger'>È stato riscontrato un errore.</p>");
         })
     });
 
+    function selectTrack(id) {
+        selectedTrack = id;
+    }
+
     $(document).on('click', '.trackButton', function () {
         const track = $('#track');
         track.val('"' + tracksList[$(this).attr('id')].trackName + '" di ' + tracksList[$(this).attr('id')].artistName);
         $("#tracksResult").empty();
+        selectTrack($(this).attr('id'));
     });
 
+    $(document).on('click', '.clickable-row', function() {
+        window.location = $(this).data("href");
+    });
 
     $('#track').on('change', function () {
         if ($(this).val().length === 0) {
@@ -122,35 +152,39 @@
         }
     });
 
-    $('#idf').on('change', function () {
-        const idfValue = $('#idfValue');
-        idfValue.removeClass('opacity-50');
-        switch ($(this).val()) {
-            case '1':
-                idfValue.text('Minima');
-                idfValue.css('color', 'darkgreen');
-                break;
-            case '2':
-                idfValue.text('Bassa');
-                idfValue.css('color', 'green');
-                break;
-            case '3':
-                idfValue.text('Media');
-                idfValue.css('color', 'orange');
-                break;
-            case '4':
-                idfValue.text('Alta');
-                idfValue.css('color', 'red');
-                break;
-            case '5':
-                idfValue.text('Grave');
-                idfValue.css('color', 'darkred');
-                break;
-        }
-    });
-
     $('#insertTrack').click(function () {
+        const settings = {
+            "url": endpoint + "/simh",
+            "method": "POST",
+            "timeout": 0,
+            "headers": {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            "data": {
+                "itunes_track_id": tracksList[selectedTrack].trackId,
+                "track_name": tracksList[selectedTrack].trackName,
+                "track_artwork": tracksList[selectedTrack].artworkUrl100,
+                "track_artist": tracksList[selectedTrack].artistName,
+                "track_collection": tracksList[selectedTrack].collectionName,
+                "track_release_date": tracksList[selectedTrack].releaseDate,
+                "track_genre": tracksList[selectedTrack].primaryGenreName,
+                "itunes_track_artist_id": tracksList[selectedTrack].artistId,
+                "itunes_track_collection_id": tracksList[selectedTrack].collectionId,
+                "itunes_track_preview_url": tracksList[selectedTrack].previewUrl,
+                "user_id": "25",
+                "idf": $('#idf').val()
+            }
+        };
 
+        $.ajax(settings).done(function (response) {
+            $('#simhTracks').prepend(
+                "<tr class='clickable-row' data-href=" + endpoint + "/" + tracksList[selectedTrack].trackId + "'>" +
+                "<th scope='row'>" + response.first_name + "</th>" +
+                "<td><img height='40' src='" + tracksList[selectedTrack].artworkUrl100 + "' alt='copertina' class='rounded-3 me-3'>" + tracksList[selectedTrack].trackName + " <span class='opacity-50'>di " + tracksList[selectedTrack].artistName + "</span></td>" +
+                "<td><span class='badge " + Status[0].color + "'>" + Status[0].name + "</span></td>" +
+                "<td>" + parseInt($('#idf').val(), 10) + "</td>" +
+                "</tr></a>");
+        });
     })
 
     const insertModal = $('#insertModal');
@@ -165,12 +199,14 @@
         $('#tracksResult').empty();
 
         tracksList = [];
+        selectedTrack = null;
     });
 
     insertModal.on('shown.bs.modal', function () {
         $('#track').focus();
 
         tracksList = [];
+        selectedTrack = null;
     });
 </script>
 </html>

@@ -6,18 +6,19 @@
     <title>{{track_title}}</title>
     <link rel="stylesheet" href="node_modules/bootstrap/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="node_modules/bootstrap-icons/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="public/css/style.css">
     <script src="node_modules/jquery/dist/jquery.min.js"></script>
     <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="public/const.js"></script>
 </head>
 
 <body>
 <div class="container">
     <div class="d-inline-block mt-5 pt-5 pb-4">
-        <img src="https://is2-ssl.mzstatic.com/image/thumb/Music118/v4/53/73/8e/53738ea9-856d-83cb-ed9a-9f18cc250613/05033197263625.rgb.jpg/100x100bb.jpg" class='img-fluid rounded-4 float-start me-2' alt="copertina">
+        <img src="{{track_artwork_url}}" class='img-fluid rounded-4 float-start me-2' alt="copertina">
         <div class='float-start m-2 ms-3 float-start' style='white-space:nowrap;'>
-            <h1 class="mb-2">Quelqu'un m'a dit</h1>
-            <h5 class="opacity-50">Carla Bruni</h5>
+            <h1 class="mb-2">{{track_name}}</h1>
+            <h5 class="opacity-50">{{track_artist}}</h5>
         </div>
     </div>
 
@@ -25,41 +26,64 @@
     <h3 class="mb-4">Brano</h3>
     <div class="row pb-4">
         <div class="col">
-            <h2>Pop francese</h2>
+            <h2>{{track_genre}}</h2>
             <h5 class="opacity-50">Genere</h5>
         </div>
         <div class="col">
-            <h2>Quelqu'un m'a dit</h2>
+            <h2>{{track_collection}}</h2>
             <h5 class="opacity-50">Album</h5>
         </div>
         <div class="col">
-            <h2>Maggio 2002</h2>
+            <h2>{{release_date}}</h2>
             <h5 class="opacity-50">Uscita</h5>
         </div>
     </div>
 
-    <hr class="mt-5">
-    <h3 class="mb-4 float-start">Fissa di Onnwen</h3>
-    <div class="row pb-4 mb-5">
-        <div class="col">
-            <h2>11 Febbraio 2022</h2>
-            <h5 class="opacity-50">Data</h5>
-        </div>
-        <div class="col">
-            <h2>6 <span>giorni</span></h2>
-            <h5 class="opacity-50">Durata fissa</h5>
-        </div>
-        <div class="col">
-            <h2>33</h2>
-            <h5 class="opacity-50">Gravità di fissa</h5>
-        </div>
-        <div class="col">
-            <h2>4,3</h2>
-            <h5 class="opacity-50">Intensità media di fissa</h5>
-        </div>
+    <div id="simh">
     </div>
 
+    <!--
     <button type="button" class="btn btn-primary w-100 my-2 mt-4" data-bs-toggle="modal" data-bs-target="#insertModal">Dichiara nuova fissa</button>
+    -->
 </div>
 </body>
+
+<script>
+    $(document).ready(function () {
+        $.ajax({
+            url: endpoint + '/tracks/{{track_id}}/simh',
+            type: 'GET',
+            dataType: 'json',
+            success: function (data) {
+                console.log(data);
+                data.forEach(function (simh) {
+                    $('#simh').append('<hr class="mt-5">\n' +
+                        '        <h3 class="mb-4 float-start">Fissa di ' + simh.first_name + ' </h3>\n' +
+                        '        <div class="row pb-4 mb-5">\n' +
+                        '            <div class="col">\n' +
+                        '                <h2>' + simh.date + '</h2>\n' +
+                        '                <h5 class="opacity-50">Data</h5>\n' +
+                        '            </div>\n' +
+                        '            <div class="col">\n' +
+                        '                <h2>' + simh.total_days + ' <span>' + (simh.total_days > 1 ? "giorni" : "giorno") + '</span></h2>\n' +
+                        '                <h5 class="opacity-50">Durata fissa</h5>\n' +
+                        '            </div>\n' +
+                        '            <div class="col">\n' +
+                        '                <h2>' + simh.gdf + '</h2>\n' +
+                        '                <h5 class="opacity-50">Gravità di fissa</h5>\n' +
+                        '            </div>\n' +
+                        '            <div class="col">\n' +
+                        '                <h2>' + simh.average_idf + '</h2>\n' +
+                        '                <h5 class="opacity-50">Intensità media di fissa</h5>\n' +
+                        '            </div>\n' +
+                        '        </div>');
+                })
+            },
+            error: function (data) {
+                console.log(data);
+            }
+        });
+    });
+</script>
+
 </html>
